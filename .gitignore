@@ -1,0 +1,6 @@
+# .gitignore
+venv/
+__pycache__/
+*.pyc
+.DS_Store
+.vscode/ # If you have specific VS Code workspace settings you don't want to share

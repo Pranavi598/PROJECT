@@ -1,0 +1,13 @@
+setup.py
+filemeta/__init__.py
+filemeta/cli.py
+filemeta/database.py
+filemeta/metadata_manager.py
+filemeta/models.py
+filemeta/utils.py
+filemeta.egg-info/PKG-INFO
+filemeta.egg-info/SOURCES.txt
+filemeta.egg-info/dependency_links.txt
+filemeta.egg-info/entry_points.txt
+filemeta.egg-info/requires.txt
+filemeta.egg-info/top_level.txt
