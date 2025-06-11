@@ -1,71 +1,71 @@
 # filemeta/database.py
-from sqlalchemy import create_engine, text # Add 'text' here
+from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker, Session
-from sqlalchemy.exc import OperationalError
-from contextlib import contextmanager
-import os
-import sys
-import click
+from sqlalchemy.exc import IntegrityError
 
-# Import Base from models
-from .models import Base
+from .models import Base, User # Import Base and User
+# REMOVE THIS LINE: from .api.auth import get_password_hash # This caused the circular import
 
-# Database URL from environment variable or default to SQLite for dev
-DATABASE_URL = os.getenv("DATABASE_URL", "postgresql://filemeta_user:your_strong_password@localhost/filemeta_db") # CHANGE THIS for your PostgreSQL setup or use SQLite
+# Database connection URL - CONSISTENT WITH PREVIOUS SETUP
+DATABASE_URL = "postgresql://filemeta_user:your_strong_password@localhost/filemeta_db"
 
-# For SQLite during development, uncomment this and comment the PostgreSQL line:
-# DATABASE_URL = "sqlite:///./filemeta.db"
+engine = create_engine(DATABASE_URL)
+SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
-engine = None # Initialize engine to None
 
-def get_engine():
-    """Ensures a single engine instance is created and returned."""
-    global engine
-    if engine is None:
-        try:
-            engine = create_engine(DATABASE_URL)
-            # Test connection (optional, but good for early error detection)
-            with engine.connect() as connection:
-                connection.scalar(text("SELECT 1")) # Use text() for raw SQL query
-            click.echo(f"Database engine created successfully for: {DATABASE_URL}")
-        except OperationalError as e:
-            click.echo(f"Error connecting to the database: {e}", err=True)
-            click.echo("Please ensure PostgreSQL is running and credentials are correct, or check DATABASE_URL.", err=True)
-            sys.exit(1) # Exit if cannot connect
-        except Exception as e:
-            click.echo(f"An unexpected error occurred during database engine creation: {e}", err=True)
-            sys.exit(1)
-    return engine
-
-SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=get_engine())
-
-@contextmanager
 def get_db():
-    """Dependency injection utility for database sessions."""
+    """Dependency to get a database session."""
     db = SessionLocal()
     try:
         yield db
     finally:
         db.close()
 
-def init_db():
-    """Creates all tables defined in models.py."""
-    click.echo("Initializing database...")
-    try:
-        Base.metadata.create_all(bind=get_engine())
-        click.echo("Database initialized successfully.")
-    except OperationalError as e:
-        click.echo(f"Error initializing database: {e}", err=True)
-        click.echo("Please ensure the database server is running and accessible.", err=True)
-        sys.exit(1)
-    except Exception as e:
-        click.echo(f"An unexpected error occurred during database initialization: {e}", err=True)
-        sys.exit(1)
+def create_tables():
+    """Creates all defined tables in the database."""
+    Base.metadata.create_all(bind=engine)
+    print("Database tables created/checked.")
 
-# Function to explicitly close engine connection (useful for testing/cleanup)
-def close_db_engine():
-    global engine
-    if engine:
-        engine.dispose()
-        engine = None
-        click.echo("Database engine connection disposed.")
+
+# --- User Management Functions ---
+def create_user(db: Session, username: str, hashed_password: str, role: str = "user") -> User:
+    """
+    Creates a new user in the database.
+    hashed_password is expected to be ALREADY HASHED by the caller.
+
+    Args:
+        db (Session): SQLAlchemy database session.
+        username (str): The username for the new user.
+        hashed_password (str): The HASHED password for the new user.
+        role (str): The role of the user (e.g., "user", "admin").
+
+    Returns:
+        User: The newly created User object.
+
+    Raises:
+        ValueError: If a user with the given username already exists or other issues.
+    """
+    existing_user = db.query(User).filter(User.username == username).first()
+    if existing_user:
+        raise ValueError(f"User with username '{username}' already exists.")
+
+    new_user = User(username=username, hashed_password=hashed_password, role=role)
+    try:
+        db.add(new_user)
+        db.commit()
+        db.refresh(new_user)
+        return new_user
+    except IntegrityError as e:
+        db.rollback()
+        raise ValueError(f"Could not create user due to integrity error: {e}")
+    except Exception as e:
+        db.rollback()
+        raise Exception(f"An unexpected error occurred while creating user: {e}")
+
+def get_user_by_username(db: Session, username: str) -> User | None:
+    """Retrieves a user by their username."""
+    return db.query(User).filter(User.username == username).first()
+
+def get_user_by_id(db: Session, user_id: int) -> User | None:
+    """Retrieves a user by their ID."""
+    return db.query(User).filter(User.id == user_id).first()

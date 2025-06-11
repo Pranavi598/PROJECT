@@ -1,5 +1,6 @@
 setup.py
 filemeta/__init__.py
+filemeta/api.py
 filemeta/cli.py
 filemeta/database.py
 filemeta/metadata_manager.py
@@ -11,3 +12,8 @@ filemeta.egg-info/dependency_links.txt
 filemeta.egg-info/entry_points.txt
 filemeta.egg-info/requires.txt
 filemeta.egg-info/top_level.txt
+filemeta/api/__init__.py
+filemeta/api/auth.py
+filemeta/api/dependencies.py
+filemeta/api/main.py
+filemeta/api/schemas.py

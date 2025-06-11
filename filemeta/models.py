@@ -1,41 +1,37 @@
 # filemeta/models.py
-from sqlalchemy import Column, Integer, String, Text, DateTime, ForeignKey
-from sqlalchemy.dialects.postgresql import JSONB
-from sqlalchemy.ext.declarative import declarative_base
+from sqlalchemy import Column, Integer, String, DateTime, Text, JSON, ForeignKey, UniqueConstraint
 from sqlalchemy.orm import relationship
-from datetime import datetime
-import json # For handling JSONB default values
+from sqlalchemy.sql import func
+from sqlalchemy.ext.declarative import declarative_base
+import json 
 
 Base = declarative_base()
 
 class File(Base):
     __tablename__ = 'files'
 
-    id = Column(Integer, primary_key=True)
-    filename = Column(String(255), nullable=False)
-    filepath = Column(Text, nullable=False)
-    owner = Column(String(255))
-    created_by = Column(String(255))
-    created_at = Column(DateTime(timezone=True), default=datetime.now)
-    updated_at = Column(DateTime(timezone=True), default=datetime.now, onupdate=datetime.now)
-    inferred_tags = Column(JSONB, default=lambda: json.dumps({}), nullable=False) # Store as JSONB
+    id = Column(Integer, primary_key=True, index=True)
+    filename = Column(String, nullable=False)
+    filepath = Column(String, unique=True, index=True, nullable=False)
+    owner = Column(String, nullable=False) # Storing user ID as string for simplicity with current User model
+    created_by = Column(String, nullable=False) # Could reference user ID if a users table is made
+    created_at = Column(DateTime, default=func.now())
+    updated_at = Column(DateTime, default=func.now(), onupdate=func.now())
+    inferred_tags = Column(JSON, default={}) # Stores automatically inferred metadata
 
     tags = relationship("Tag", back_populates="file", cascade="all, delete-orphan")
 
-    def __repr__(self):
-        return f"<File(id={self.id}, filename='{self.filename}', filepath='{self.filepath}')>"
-
     def to_dict(self):
-        """Converts File object to a dictionary for display."""
-        inferred = self.inferred_tags if self.inferred_tags else {}
-        # Ensure inferred_tags is a dict, not a string if it was loaded directly from JSONB
-        if isinstance(inferred, str):
-            try:
-                inferred = json.loads(inferred)
-            except json.JSONDecodeError:
-                inferred = {} # Fallback
+        """Converts the File object and its associated tags to a dictionary."""
+        inferred = self.inferred_tags if isinstance(self.inferred_tags, dict) else {}
+        # Ensure inferred_tags is a dictionary
+        try:
+            inferred = json.loads(self.inferred_tags) if isinstance(self.inferred_tags, str) else self.inferred_tags
+        except json.JSONDecodeError:
+            inferred = {} # Fallback if JSON is malformed
 
-        custom_tags = {tag.key: tag.get_typed_value() for tag in self.tags}
+        custom_tags_dict = {tag.key: self._convert_tag_value(tag.value, tag.value_type) for tag in self.tags}
+
         return {
             "ID": self.id,
             "Filename": self.filename,
@@ -45,32 +41,60 @@ class File(Base):
             "Created At": self.created_at.isoformat() if self.created_at else None,
             "Updated At": self.updated_at.isoformat() if self.updated_at else None,
             "Inferred Tags": inferred,
-            "Custom Tags": custom_tags
+            "Custom Tags": custom_tags_dict,
         }
+
+    def _convert_tag_value(self, value, value_type):
+        """Converts stored string value back to its original type."""
+        if value_type == 'integer':
+            return int(value)
+        elif value_type == 'float':
+            return float(value)
+        elif value_type == 'boolean':
+            return value.lower() == 'true'
+        elif value_type == 'list':
+            try:
+                return json.loads(value)
+            except json.JSONDecodeError:
+                return [v.strip() for v in value.strip('[]').split(',') if v.strip()] # Fallback
+        elif value_type == 'dict':
+            try:
+                return json.loads(value)
+            except json.JSONDecodeError:
+                return {} # Fallback
+        return value # Default to string
 
 class Tag(Base):
     __tablename__ = 'tags'
 
-    id = Column(Integer, primary_key=True)
-    file_id = Column(Integer, ForeignKey('files.id', ondelete='CASCADE'), nullable=False)
-    key = Column(String(255), nullable=False)
-    value = Column(Text, nullable=False)
-    value_type = Column(String(50), nullable=False) # Store original Python type
+    id = Column(Integer, primary_key=True, index=True)
+    file_id = Column(Integer, ForeignKey('files.id'), nullable=False)
+    key = Column(String, nullable=False)
+    value = Column(Text, nullable=False) # Store all values as text/string
+    value_type = Column(String, nullable=False) # e.g., 'string', 'integer', 'float', 'boolean', 'list', 'dict'
+
+    # Ensure uniqueness of key within the scope of a file_id
+    __table_args__ = (UniqueConstraint('file_id', 'key', name='_file_key_uc'),)
 
     file = relationship("File", back_populates="tags")
 
-    def __repr__(self):
-        return f"<Tag(id={self.id}, file_id={self.file_id}, key='{self.key}', value='{self.value}', type='{self.value_type}')>"
 
-    def get_typed_value(self):
-        """Converts the stored string value back to its original Python type."""
-        if self.value_type == 'int':
-            return int(self.value)
-        elif self.value_type == 'float':
-            return float(self.value)
-        elif self.value_type == 'bool':
-            return self.value.lower() == 'true' # Handle 'True' or 'true'
-        elif self.value_type == 'NoneType':
-            return None
-        # Add more types as needed (e.g., list, dict if you allow complex tag values)
-        return self.value # Default to string
+class User(Base):
+    __tablename__ = 'users'
+
+    id = Column(Integer, primary_key=True, index=True)
+    username = Column(String, unique=True, index=True, nullable=False)
+    hashed_password = Column(String, nullable=False)
+    role = Column(String, default="user", nullable=False) # e.g., "admin", "user"
+    created_at = Column(DateTime, default=func.now())
+    updated_at = Column(DateTime, default=func.now(), onupdate=func.now())
+
+    def to_dict(self):
+        """Converts the User object to a dictionary (useful for responses)."""
+        return {
+            "id": self.id,
+            "username": self.username,
+            "role": self.role,
+            "created_at": self.created_at.isoformat() if self.created_at else None,
+            "updated_at": self.updated_at.isoformat() if self.updated_at else None,
+        }

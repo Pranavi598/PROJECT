@@ -1,25 +1,24 @@
 # filemeta/metadata_manager.py
-
-from typing import Dict, Any, List
+from typing import Dict, Any, List, Optional
 import os
 import json
 from sqlalchemy.orm import Session
 from sqlalchemy.exc import IntegrityError, NoResultFound
 from datetime import datetime
-from sqlalchemy import func, or_ ,String # Add func and or_ for search queries
+from sqlalchemy import func, or_, String
 
 from .models import File, Tag
 from .utils import infer_metadata, parse_tag_value
-from .database import get_db # To get a session
 
-def add_file_metadata(db: Session, filepath: str, custom_tags: Dict[str, Any]) -> File:
+def add_file_metadata(db: Session, filepath: str, custom_tags: Dict[str, Any], owner_id: int) -> File:
     """
-    Adds a new metadata record for a file.
+    Adds a new metadata record for a file, associating it with a specific owner.
 
     Args:
         db (Session): SQLAlchemy database session.
         filepath (str): Absolute path to the file on the server.
         custom_tags (Dict[str, Any]): Dictionary of custom tags (key-value pairs).
+        owner_id (int): The ID of the user who owns this file metadata record.
 
     Returns:
         File: The newly created File object.
@@ -41,11 +40,12 @@ def add_file_metadata(db: Session, filepath: str, custom_tags: Dict[str, Any]) -
     inferred_data = infer_metadata(filepath)
 
     # Create File record
+    # 'owner' and 'created_by' now use the provided owner_id
     file_record = File(
         filename=os.path.basename(filepath),
         filepath=filepath,
-        owner=inferred_data.get('os_owner'), # Get from inferred_data
-        created_by="system", # Or from a user context if implemented later
+        owner=str(owner_id), # Store owner ID as a string in the owner column
+        created_by=str(owner_id), # Assign created_by to the owner ID
         inferred_tags=json.dumps(inferred_data) # Store inferred data as JSON string
     )
     db.add(file_record)
@@ -69,33 +69,37 @@ def add_file_metadata(db: Session, filepath: str, custom_tags: Dict[str, Any]) -
         return file_record
     except IntegrityError as e:
         db.rollback()
-        raise ValueError(f"Database integrity error: {e}")
+        # More specific error message for duplicate filepath if it's the unique constraint
+        if "UNIQUE constraint failed" in str(e) or "duplicate key value violates unique constraint" in str(e):
+            # If the file already exists, grab its ID for a clearer error message
+            existing_file_after_rollback = db.query(File).filter(File.filepath == filepath).first()
+            existing_id_msg = f" (ID: {existing_file_after_rollback.id})" if existing_file_after_rollback else ""
+            raise ValueError(f"Metadata for file '{filepath}' already exists{existing_id_msg}. Use 'update' to modify.")
+        else:
+            raise Exception(f"Database integrity error: {e}. Check database constraints.") # More specific general integrity error
     except Exception as e:
         db.rollback()
-        raise Exception(f"Failed to add file metadata: {e}")
+        raise Exception(f"An unexpected error occurred while adding file metadata: {e}") # Clarified message
 
-def get_file_metadata(db: Session, file_id: int) -> File:
+def get_file_by_id(db: Session, file_id: int) -> Optional[File]:
     """
-    Retrieves a specific File record and its associated Tag records.
+    Retrieves a specific File record by its ID.
+    Returns None if not found, instead of raising an exception,
+    allowing the API layer to handle 404 responses.
 
     Args:
         db (Session): SQLAlchemy database session.
         file_id (int): The ID of the file record.
 
     Returns:
-        File: The File object with associated tags.
-
-    Raises:
-        NoResultFound: If no file metadata record exists for the given ID.
+        Optional[File]: The File object if found, otherwise None.
     """
-    file_record = db.query(File).filter(File.id == file_id).first()
-    if not file_record:
-        raise NoResultFound(f"No metadata found for file ID: {file_id}")
-    return file_record
+    return db.query(File).filter(File.id == file_id).first()
 
-def list_files(db: Session) -> List[File]:
+def get_all_files_for_listing(db: Session) -> List[File]:
     """
     Retrieves all File records and their associated Tag records.
+    Used when no ownership filtering is applied (e.g., for admin users).
 
     Args:
         db (Session): SQLAlchemy database session.
@@ -104,55 +108,53 @@ def list_files(db: Session) -> List[File]:
         List[File]: A list of File objects.
     """
     return db.query(File).all()
-# filemeta/metadata_manager.py (add this function)
 
-# ... existing functions ...
-
-def search_files(db: Session, keywords: List[str]) -> List[File]:
+def search_files_by_criteria(db: Session, keywords: List[str], owner_id: Optional[int] = None) -> List[File]:
     """
-    Searches for files based on keywords across various metadata fields.
+    Searches for files based on keywords across various metadata fields,
+    optionally filtering by owner.
 
     Args:
         db (Session): SQLAlchemy database session.
         keywords (List[str]): A list of keywords to search for.
+        owner_id (Optional[int]): If provided, search will be restricted to files
+                                   owned by this user ID.
 
     Returns:
         List[File]: A list of File objects matching the search criteria.
     """
-    if not keywords:
-        return []
+    query = db.query(File)
 
-    search_conditions = []
-    for keyword in keywords:
-        search_pattern = f"%{keyword.lower()}%" # Case-insensitive search pattern
+    if keywords:
+        search_conditions = []
+        for keyword in keywords:
+            search_pattern = f"%{keyword.lower()}%" # Case-insensitive search pattern
 
-        # Search in File table fields
-        search_conditions.append(func.lower(File.filename).like(search_pattern))
-        search_conditions.append(func.lower(File.filepath).like(search_pattern))
-        search_conditions.append(func.lower(File.owner).like(search_pattern))
+            # Search in File table fields
+            search_conditions.append(func.lower(File.filename).like(search_pattern))
+            search_conditions.append(func.lower(File.filepath).like(search_pattern))
+            search_conditions.append(func.lower(File.owner).like(search_pattern))
 
-        # Search within inferred_tags (JSONB)
-        # This converts JSONB to text and searches within it.
-        # Note: For very large JSONB or complex searches, consider PostgreSQL's FTS.
-        search_conditions.append(func.lower(File.inferred_tags.cast(String)).like(search_pattern))
+            # Search within inferred_tags (JSONB)
+            search_conditions.append(func.lower(File.inferred_tags.cast(String)).like(search_pattern))
 
-        # Search in associated Tags table (key and value)
-        # This joins with Tags and checks both key and value
-        search_conditions.append(
-            File.tags.any(
-                or_(
-                    func.lower(Tag.key).like(search_pattern),
-                    func.lower(Tag.value).like(search_pattern)
+            # Search in associated Tags table (key and value)
+            search_conditions.append(
+                File.tags.any(
+                    or_(
+                        func.lower(Tag.key).like(search_pattern),
+                        func.lower(Tag.value).like(search_pattern)
+                    )
                 )
             )
-        )
+        query = query.filter(or_(*search_conditions))
 
-    # Combine all conditions with OR logic
+    # Apply owner filter if owner_id is provided
+    if owner_id is not None:
+        query = query.filter(File.owner == str(owner_id))
+
     # Use .distinct() to avoid returning the same File multiple times if multiple tags match
-    return db.query(File).filter(or_(*search_conditions)).distinct().all()
-# filemeta/metadata_manager.py (add this function)
-
-# ... existing functions (including search_files) ...
+    return query.distinct().all()
 
 def update_file_tags(db: Session, file_id: int, new_tags: Dict[str, Any], overwrite: bool = False) -> File:
     """
@@ -175,7 +177,7 @@ def update_file_tags(db: Session, file_id: int, new_tags: Dict[str, Any], overwr
     """
     file_record = db.query(File).filter(File.id == file_id).first()
     if not file_record:
-        raise NoResultFound(f"No metadata found for file ID: {file_id}")
+        raise NoResultFound(f"No metadata found for file ID: {file_id}") # API layer will catch this
 
     try:
         if overwrite:
@@ -214,4 +216,33 @@ def update_file_tags(db: Session, file_id: int, new_tags: Dict[str, Any], overwr
         raise
     except Exception as e:
         db.rollback()
-        raise Exception(f"Failed to update file tags for ID {file_id}: {e}")
+        raise Exception(f"An unexpected error occurred while updating file tags for ID {file_id}: {e}")
+
+def delete_file_metadata(db: Session, file_id: int) -> bool:
+    """
+    Deletes a file metadata record and its associated custom tags from the database.
+    Returns True on successful deletion, False if the file record was not found.
+
+    Args:
+        db (Session): SQLAlchemy database session.
+        file_id (int): The ID of the file metadata record to delete.
+
+    Returns:
+        bool: True if the record was successfully deleted, False if it was not found.
+
+    Raises:
+        Exception: For other database or internal errors.
+    """
+    file_record = db.query(File).filter(File.id == file_id).first()
+    if not file_record:
+        return False # Indicate that no record was found for deletion
+
+    try:
+        # Due to 'cascade="all, delete-orphan"' in File.tags relationship
+        # in models.py, deleting the File will automatically delete its associated Tags.
+        db.delete(file_record)
+        db.commit()
+        return True
+    except Exception as e:
+        db.rollback()
+        raise Exception(f"An unexpected error occurred while deleting metadata for file ID {file_id}: {e}")
