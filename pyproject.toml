@@ -1,0 +1,36 @@
+[project]
+name = "papilv-filemeta"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.8"
+dependencies = []
+
+[tool.poetry]
+name = "papilv-filemeta"
+version = "0.1.1"
+description = "filemeta project"
+authors = ["Your Name <you@example.com>"]
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = "^3.9"
+SQLAlchemy = "^2.0.41"
+fastapi = "^0.109.0" # Changed from your current version
+uvicorn = "^0.27.0"
+psycopg2-binary = "^2.9.9"
+python-dotenv = "^1.0.0"
+# You might have other dependencies here, keep them as is
+starlette = "^0.36.0" # Changed from your current version
+psutil = "^5.9.8" # For infer_metadata
+python-jose = {extras = ["cryptography"], version = "^3.5.0"}
+passlib = "^1.7.4"
+python-multipart = "^0.0.20"
+
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
+
+[tool.poetry.scripts]
+filemeta = "papilv_filemeta.cli:cli"

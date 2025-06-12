@@ -1,0 +1,46 @@
+[
+    {
+        "ID": 2,
+        "Filename": "quarterly_results_2025.csv",
+        "Filepath": "/tmp/quarterly_results_2025.csv",
+        "Owner": "papil",
+        "Created By": "system",
+        "Created At": "2025-06-06T07:19:09.826380+00:00",
+        "Updated At": "2025-06-08T10:12:51.237924+00:00",
+        "Inferred Tags": {
+            "file_size": 0,
+            "last_accessed_at": "2025-06-06T07:18:59.586535",
+            "last_modified_at": "2025-06-06T07:18:59.586535",
+            "created_at_fs": "2025-06-06T07:18:59.586535",
+            "os_owner": "papil",
+            "mime_type": "text/csv"
+        },
+        "Custom Tags": {
+            "new_client": "AcmeCorp",
+            "phase": "Completed"
+        }
+    },
+    {
+        "ID": 3,
+        "Filename": "important_image.jpg",
+        "Filepath": "/tmp/important_image.jpg",
+        "Owner": "papil",
+        "Created By": "system",
+        "Created At": "2025-06-06T07:19:14.509153+00:00",
+        "Updated At": "2025-06-08T10:13:47.419146+00:00",
+        "Inferred Tags": {
+            "file_size": 0,
+            "last_accessed_at": "2025-06-06T07:19:01.578546",
+            "last_modified_at": "2025-06-06T07:19:01.578546",
+            "created_at_fs": "2025-06-06T07:19:01.578546",
+            "os_owner": "papil",
+            "mime_type": "image/jpeg"
+        },
+        "Custom Tags": {
+            "category": "Graphics",
+            "resolution": "1920x1080",
+            "capture_date": "2024-05-01",
+            "description": "Detailed image"
+        }
+    }
+]
