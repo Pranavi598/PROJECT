@@ -1,3 +1,0 @@
-[console_scripts]
-filemeta = filemeta.cli:cli
-
