@@ -4,3 +4,7 @@ __pycache__/
 *.pyc
 .DS_Store
 .vscode/ # If you have specific VS Code workspace settings you don't want to share
+test_init.py
+create_initial_admin.py
+large_file_15MB.txt
+rub_db_init.py

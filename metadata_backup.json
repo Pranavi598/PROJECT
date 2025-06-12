@@ -1,0 +1,133 @@
+[
+    {
+        "ID": 4,
+        "Filename": "test.txt",
+        "Filepath": "test.txt",
+        "Owner": "pranavik928",
+        "Created By": "system",
+        "Created At": "2025-06-12T11:13:31.392806+00:00",
+        "Updated At": "2025-06-12T11:13:31.392814+00:00",
+        "Inferred Tags": {
+            "file_size": 10,
+            "last_accessed_at": "2025-06-12T11:13:12.742454",
+            "last_modified_at": "2025-06-12T11:13:12.742454",
+            "created_at_fs": "2025-06-12T11:13:12.742454",
+            "os_owner": "pranavik928",
+            "mime_type": "text/plain"
+        },
+        "Custom Tags": {
+            "tag2": "Verma",
+            "tag1": "papil123",
+            "project": "Marketing",
+            "status": "final",
+            "year": 2025,
+            "new_attribute": "some_value"
+        }
+    },
+    {
+        "ID": 7,
+        "Filename": "my_project_brief.doc",
+        "Filepath": "/tmp/my_project_brief.doc",
+        "Owner": "pranavik928",
+        "Created By": "system",
+        "Created At": "2025-06-12T16:03:23.168564+00:00",
+        "Updated At": "2025-06-12T16:03:23.168572+00:00",
+        "Inferred Tags": {
+            "file_size": 51,
+            "last_accessed_at": "2025-06-12T11:12:26.740896",
+            "last_modified_at": "2025-06-12T16:01:47.773752",
+            "created_at_fs": "2025-06-12T16:01:47.773752",
+            "os_owner": "pranavik928",
+            "mime_type": "application/msword"
+        },
+        "Custom Tags": {}
+    },
+    {
+        "ID": 8,
+        "Filename": "quarterly_results_2025.csv",
+        "Filepath": "/tmp/quarterly_results_2025.csv",
+        "Owner": "pranavik928",
+        "Created By": "system",
+        "Created At": "2025-06-12T16:13:39.361238+00:00",
+        "Updated At": "2025-06-12T16:13:39.361243+00:00",
+        "Inferred Tags": {
+            "file_size": 46,
+            "last_accessed_at": "2025-06-12T11:12:26.744896",
+            "last_modified_at": "2025-06-12T16:02:08.335343",
+            "created_at_fs": "2025-06-12T16:02:08.335343",
+            "os_owner": "pranavik928",
+            "mime_type": "text/csv"
+        },
+        "Custom Tags": {
+            "quarter": "Q1",
+            "year": 2025,
+            "type": "FinancialReport"
+        }
+    },
+    {
+        "ID": 9,
+        "Filename": "important_image.jpg",
+        "Filepath": "/tmp/important_image.jpg",
+        "Owner": "pranavik928",
+        "Created By": "system",
+        "Created At": "2025-06-12T16:14:03.384840+00:00",
+        "Updated At": "2025-06-12T16:14:03.384845+00:00",
+        "Inferred Tags": {
+            "file_size": 0,
+            "last_accessed_at": "2025-06-12T11:12:26.746896",
+            "last_modified_at": "2025-06-12T11:12:26.746896",
+            "created_at_fs": "2025-06-12T11:12:26.746896",
+            "os_owner": "pranavik928",
+            "mime_type": "image/jpeg"
+        },
+        "Custom Tags": {
+            "category": "Graphics",
+            "resolution": "1920x1080"
+        }
+    },
+    {
+        "ID": 10,
+        "Filename": "my_first_document.pdf",
+        "Filepath": "/tmp/my_first_document.pdf",
+        "Owner": "pranavik928",
+        "Created By": "system",
+        "Created At": "2025-06-12T16:14:08.303505+00:00",
+        "Updated At": "2025-06-12T16:14:08.303511+00:00",
+        "Inferred Tags": {
+            "file_size": 0,
+            "last_accessed_at": "2025-06-12T15:57:25.435459",
+            "last_modified_at": "2025-06-12T15:57:25.435459",
+            "created_at_fs": "2025-06-12T15:57:25.435459",
+            "os_owner": "pranavik928",
+            "mime_type": "application/pdf"
+        },
+        "Custom Tags": {
+            "project": "Marketing",
+            "confidential": true,
+            "year": 2025
+        }
+    },
+    {
+        "ID": 11,
+        "Filename": "another_report.xlsx",
+        "Filepath": "/tmp/another_report.xlsx",
+        "Owner": "pranavik928",
+        "Created By": "system",
+        "Created At": "2025-06-12T16:14:11.141534+00:00",
+        "Updated At": "2025-06-12T16:14:11.141540+00:00",
+        "Inferred Tags": {
+            "file_size": 0,
+            "last_accessed_at": "2025-06-12T15:57:25.438459",
+            "last_modified_at": "2025-06-12T15:57:25.438459",
+            "created_at_fs": "2025-06-12T15:57:25.438459",
+            "os_owner": "pranavik928",
+            "mime_type": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+        },
+        "Custom Tags": {
+            "department": "Sales",
+            "status": "Draft",
+            "version": 1.0,
+            "budget": 1500.5
+        }
+    }
+]
